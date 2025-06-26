@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Calendar, Building2, Tag, Sun, Moon, Home, ChevronDown, Clock, ExternalLink } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Calendar, Building2, Sun, Moon, Home, ChevronDown, Clock, ExternalLink, Search } from 'lucide-react';
 import { supabase, Event } from '../lib/supabase';
 import { useTheme } from '../contexts/ThemeContext';
 
 const PublicFeed: React.FC = () => {
-  const { category } = useParams<{ category: string }>();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const [events, setEvents] = useState<Event[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
-  const [selectedMediaType, setSelectedMediaType] = useState<string>('all');
   const [selectedTags, setSelectedTags] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [departments, setDepartments] = useState<string[]>([]);
   const [allTags, setAllTags] = useState<string[]>([]);
   const [navbarVisible, setNavbarVisible] = useState(true);
@@ -21,11 +21,11 @@ const PublicFeed: React.FC = () => {
 
   useEffect(() => {
     fetchEvents();
-  }, [category]);
+  }, []);
 
   useEffect(() => {
     filterEvents();
-  }, [events, selectedDepartment, selectedMediaType, selectedTags]);
+  }, [events, selectedDepartment, selectedTags, selectedCategory, searchQuery]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -46,16 +46,10 @@ const PublicFeed: React.FC = () => {
 
   const fetchEvents = async () => {
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from('events')
         .select('*')
         .order('created_at', { ascending: false });
-
-      if (category && category !== 'all') {
-        query = query.eq('event_category', category);
-      }
-
-      const { data, error } = await query;
 
       if (error) throw error;
       setEvents(data || []);
@@ -75,16 +69,26 @@ const PublicFeed: React.FC = () => {
   const filterEvents = () => {
     let filtered = events;
 
+    // Search functionality
+    if (searchQuery.trim() !== '') {
+      filtered = filtered.filter(event => 
+        event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        event.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        event.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        event.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+    }
+
     if (selectedDepartment !== 'all') {
       filtered = filtered.filter(event => event.department === selectedDepartment);
     }
 
-    if (selectedMediaType !== 'all') {
-      filtered = filtered.filter(event => event.media_type === selectedMediaType);
-    }
-
     if (selectedTags !== 'all') {
       filtered = filtered.filter(event => event.tags?.includes(selectedTags));
+    }
+
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(event => event.event_category === selectedCategory);
     }
 
     setFilteredEvents(filtered);
@@ -92,32 +96,32 @@ const PublicFeed: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-black">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen flex items-center justify-center cluely-bg dark:cluely-bg-dark">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black dark:border-white"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-black transition-colors duration-200">
+    <div className="min-h-screen cluely-bg dark:cluely-bg-dark transition-all duration-500">
       {/* Header */}
-      <header className={`fixed top-0 left-0 right-0 z-50 bg-white dark:bg-dark-card border-b border-gray-200 dark:border-dark-border transition-all duration-300 ${
+      <header className={`fixed top-0 left-0 right-0 z-50 mx-4 mt-4 glass-card dark:glass-card-dark transition-all duration-300 ${
         navbarVisible ? 'navbar-visible' : 'navbar-hidden'
       }`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-3">
-                <div className="p-2 bg-blue-600 rounded-lg">
+                <div className="p-2 bg-black rounded-2xl">
                   <Calendar className="h-5 w-5 text-white" />
                 </div>
-                <span className="text-xl font-semibold text-gray-900 dark:text-white">Evently</span>
+                <span className="text-xl font-semibold text-gray-900 dark:text-white">Vibe-Check</span>
               </div>
               
               <nav className="hidden md:flex space-x-6">
                 <button
                   onClick={() => navigate('/')}
-                  className="flex items-center space-x-1 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors duration-200"
+                  className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors duration-300"
                 >
                   <Home className="h-4 w-4" />
                   <span>Home</span>
@@ -128,7 +132,7 @@ const PublicFeed: React.FC = () => {
             <div className="flex items-center space-x-4">
               <button
                 onClick={toggleTheme}
-                className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors duration-200"
+                className="p-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors duration-300"
               >
                 {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
               </button>
@@ -137,27 +141,41 @@ const PublicFeed: React.FC = () => {
         </div>
       </header>
 
-      <div className="pt-16">
+      <div className="pt-24">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Page Header */}
-          <div className="mb-8">
+          <div className="mb-8 animate-slide-up">
             <h1 className="text-3xl font-semibold text-gray-900 dark:text-white text-center">
-              {category === 'technical' ? 'Tech Events' : category === 'non-technical' ? 'Non-Tech Events' : 'Events'}
+              All Events
             </h1>
           </div>
 
           {/* Filters */}
-          <div className="mb-8">
+          <div className="mb-8 animate-slide-up" style={{ animationDelay: '200ms' }}>
+            {/* Search Bar */}
+            <div className="max-w-md mx-auto mb-6">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search events..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 glass-card dark:glass-card-dark text-gray-900 dark:text-white placeholder-gray-600 dark:placeholder-gray-400 focus:ring-2 focus:ring-black dark:focus:ring-white transition-all duration-300"
+                />
+              </div>
+            </div>
+
             <div className="flex flex-wrap gap-3 justify-center">
               <div className="relative">
                 <select
-                  value={selectedMediaType}
-                  onChange={(e) => setSelectedMediaType(e.target.value)}
-                  className="appearance-none px-4 py-2 pr-8 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-full text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-colors duration-200"
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="appearance-none px-4 py-2 pr-8 glass-card dark:glass-card-dark text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-black dark:focus:ring-white transition-all duration-300"
                 >
-                  <option value="all">Media Type</option>
-                  <option value="image">Image</option>
-                  <option value="video">Video</option>
+                  <option value="all">All Categories</option>
+                  <option value="technical">Tech Events</option>
+                  <option value="non-technical">Non-Tech Events</option>
                 </select>
                 <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
               </div>
@@ -166,7 +184,7 @@ const PublicFeed: React.FC = () => {
                 <select
                   value={selectedDepartment}
                   onChange={(e) => setSelectedDepartment(e.target.value)}
-                  className="appearance-none px-4 py-2 pr-8 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-full text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-colors duration-200"
+                  className="appearance-none px-4 py-2 pr-8 glass-card dark:glass-card-dark text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-black dark:focus:ring-white transition-all duration-300"
                 >
                   <option value="all">Club</option>
                   {departments.map((dept) => (
@@ -180,7 +198,7 @@ const PublicFeed: React.FC = () => {
                 <select
                   value={selectedTags}
                   onChange={(e) => setSelectedTags(e.target.value)}
-                  className="appearance-none px-4 py-2 pr-8 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-full text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-colors duration-200"
+                  className="appearance-none px-4 py-2 pr-8 glass-card dark:glass-card-dark text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-black dark:focus:ring-white transition-all duration-300"
                 >
                   <option value="all">Custom Tags</option>
                   {allTags.map((tag) => (
@@ -194,12 +212,12 @@ const PublicFeed: React.FC = () => {
 
           {/* Events Feed */}
           {filteredEvents.length === 0 ? (
-            <div className="text-center py-16">
-              <Calendar className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-              <h3 className="text-xl font-medium text-gray-600 dark:text-gray-400 mb-2">
+            <div className="text-center py-16 animate-slide-up" style={{ animationDelay: '400ms' }}>
+              <Calendar className="h-16 w-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+              <h3 className="text-xl font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {events.length === 0 ? 'No Events Yet' : 'No Events Match Your Filters'}
               </h3>
-              <p className="text-gray-500 dark:text-gray-500">
+              <p className="text-gray-600 dark:text-gray-400">
                 {events.length === 0 
                   ? 'Check back soon for exciting campus events!' 
                   : 'Try adjusting your filters to see more events.'
@@ -273,29 +291,30 @@ const InstagramEventCard: React.FC<InstagramEventCardProps> = ({ event, index })
     if (imageError) {
       return 'https://images.pexels.com/photos/1181298/pexels-photo-1181298.jpeg?auto=compress&cs=tinysrgb&w=800';
     }
-    return `/api/image/${event.media_url}`;
+    // Encode the URL to handle special characters and spaces
+    return `/api/image/${encodeURIComponent(event.media_url)}`;
   };
 
   return (
     <article 
-      className="bg-white dark:bg-dark-card rounded-2xl shadow-sm border border-gray-200 dark:border-dark-border animate-fade-in"
-      style={{ animationDelay: `${index * 100}ms` }}
+      className="glass-card dark:glass-card-dark animate-slide-up overflow-hidden"
+      style={{ animationDelay: `${index * 150}ms` }}
     >
       {/* Header */}
       <div className="flex items-center justify-between p-4 pb-3">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-            <Building2 className="h-5 w-5 text-white" />
+          <div className="w-10 h-10 bg-gradient-to-br from-gray-700 to-black dark:from-gray-300 dark:to-white rounded-full flex items-center justify-center">
+            <Building2 className="h-5 w-5 text-white dark:text-black" />
           </div>
           <div>
             <h3 className="font-medium text-gray-900 dark:text-white text-sm">
               {event.department}
             </h3>
             <div className="flex items-center space-x-2">
-              <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                 event.event_category === 'technical' 
-                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200' 
-                  : 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200'
+                  ? 'bg-black/10 dark:bg-white/10 text-gray-800 dark:text-gray-200' 
+                  : 'bg-black/10 dark:bg-white/10 text-gray-800 dark:text-gray-200'
               }`}>
                 {event.event_category === 'technical' ? 'Tech' : 'Non-Tech'}
               </span>
@@ -311,7 +330,7 @@ const InstagramEventCard: React.FC<InstagramEventCardProps> = ({ event, index })
         {event.link && (
           <button 
             onClick={() => window.open(event.link, '_blank')}
-            className="text-blue-600 hover:text-blue-700 transition-colors duration-200"
+            className="text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white transition-colors duration-300"
           >
             <ExternalLink className="h-5 w-5" />
           </button>
@@ -333,7 +352,7 @@ const InstagramEventCard: React.FC<InstagramEventCardProps> = ({ event, index })
         ) : (
           <div className="aspect-square">
             <video
-              src={`/api/image/${event.media_url}`}
+              src={`/api/image/${encodeURIComponent(event.media_url)}`}
               controls
               className="w-full h-full object-cover"
               poster="https://images.pexels.com/photos/1181298/pexels-photo-1181298.jpeg?auto=compress&cs=tinysrgb&w=800"
@@ -360,7 +379,7 @@ const InstagramEventCard: React.FC<InstagramEventCardProps> = ({ event, index })
               {event.tags.map((tag, tagIndex) => (
                 <span
                   key={tagIndex}
-                  className="text-blue-600 dark:text-blue-400 text-sm hover:underline cursor-pointer"
+                  className="text-gray-700 dark:text-gray-300 text-sm hover:text-black dark:hover:text-white transition-colors duration-300 cursor-pointer"
                 >
                   {tag}
                 </span>

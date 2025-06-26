@@ -8,16 +8,29 @@ const PORT = 3001;
 app.use(cors());
 
 // Image proxy endpoint
-app.get('/api/image/:filename', async (req, res) => {
-  const { filename } = req.params;
+app.get('/api/image/*', async (req, res) => {
+  const url = req.params[0];
   
-  if (!filename) {
-    return res.status(400).json({ error: 'Filename is required' });
+  if (!url) {
+    return res.status(400).json({ error: 'URL is required' });
   }
 
   try {
-    // Fetch image from GitHub repository
-    const githubUrl = `https://raw.githubusercontent.com/anishkm/college-events/main/assets/${filename}`;
+    let githubUrl;
+    
+    // If it's already a full URL, process it
+    if (url.startsWith('http')) {
+      // Convert GitHub blob URLs to raw URLs
+      if (url.includes('github.com') && url.includes('/blob/')) {
+        githubUrl = url.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
+      } else {
+        githubUrl = url;
+      }
+    } else {
+      // Fallback: treat as filename for backward compatibility
+      githubUrl = `https://raw.githubusercontent.com/AnishKMBtech/images/main/${url}`;
+    }
+    
     const response = await fetch(githubUrl);
     
     if (!response.ok) {
@@ -28,7 +41,7 @@ app.get('/api/image/:filename', async (req, res) => {
     const imageBuffer = await response.arrayBuffer();
     
     // Determine content type based on file extension
-    const extension = filename.split('.').pop()?.toLowerCase();
+    const extension = githubUrl.split('.').pop()?.toLowerCase();
     let contentType = 'application/octet-stream';
     
     switch (extension) {

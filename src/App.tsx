@@ -9,10 +9,10 @@ function App() {
   return (
     <ThemeProvider>
       <Router>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+        <div className="min-h-screen cluely-bg dark:cluely-bg-dark transition-all duration-500">
           <Routes>
             <Route path="/" element={<CategorySelection />} />
-            <Route path="/events/:category" element={<PublicFeed />} />
+            <Route path="/events" element={<PublicFeed />} />
             <Route path="/admin" element={<AdminPanel />} />
           </Routes>
         </div>
